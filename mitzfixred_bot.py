@@ -1,3 +1,13 @@
+import os
+
+TOKEN = os.getenv("TOKEN")
+EMAIL = os.getenv("EMAIL")
+PASSWORD = os.getenv("PASSWORD")
+
+print("TOKEN =", TOKEN)
+print("EMAIL =", EMAIL)
+print("PASSWORD =", PASSWORD)
+
 from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 import smtplib

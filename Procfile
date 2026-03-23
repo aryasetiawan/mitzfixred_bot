@@ -1,1 +1,1 @@
-worker: mitzfixred_bot.py
+worker: python3 mitzfixred_bot.py

@@ -20,7 +20,7 @@ import time
 import uuid
 
 # ===== CONFIG =====
-TOKEN = "8649310258:AAGOZubz7mmprf_HQ_JU4PBk7Rnr1VScQAw"
+TOKEN = "8649310258:AAHR3wg463R3bRot0KRDQoSMZ-L5Gky6plI"
 EMAIL = "tom273838@gmail.com"
 PASSWORD = "xzmztxbaignpyscl"
 TUJUAN = "support@support.whatsapp.com"

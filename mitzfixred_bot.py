@@ -7,10 +7,9 @@ import email
 import threading
 import asyncio
 import time
-import uuid
 import os
 
-# ===== CONFIG (AMBIL DARI RAILWAY VARIABLES) =====
+# ===== CONFIG =====
 TOKEN = os.getenv("TOKEN")
 EMAIL = os.getenv("EMAIL")
 PASSWORD = os.getenv("PASSWORD")
@@ -25,25 +24,34 @@ requests_db = {}
 
 # ===== KIRIM EMAIL =====
 def kirim_email(no_hp, request_id):
-    isi = f"Halo WhatsApp Support\nNomor: {no_hp}\nNOMOR: {request_id}"
+    try:
+        isi = f"Halo WhatsApp Support\nNomor: {no_hp}\nNOMOR: {request_id}"
 
-    msg = MIMEText(isi)
-    msg['Subject'] = f"WA {request_id}"
-    msg['From'] = EMAIL
-    msg['To'] = TUJUAN
+        msg = MIMEText(isi)
+        msg['Subject'] = f"WA {request_id}"
+        msg['From'] = EMAIL
+        msg['To'] = TUJUAN
 
-    server = smtplib.SMTP("smtp.gmail.com", 587)
-    server.starttls()
-    server.login(EMAIL, PASSWORD)
-    server.send_message(msg)
-    server.quit()
+        server = smtplib.SMTP("smtp.gmail.com", 587, timeout=10)
+        server.starttls()
+        server.login(EMAIL, PASSWORD)
+        server.send_message(msg)
+        server.quit()
+
+        print("✅ Email terkirim:", request_id)
+
+    except Exception as e:
+        print("❌ Gagal kirim email:", e)
 
 # ===== KIRIM NOTIF TELEGRAM =====
 async def kirim_notif(app, chat_id, req_id):
-    await app.bot.send_message(
-        chat_id,
-        f"📩 BALASAN MASUK!\nNOMOR: {req_id}"
-    )
+    try:
+        await app.bot.send_message(
+            chat_id,
+            f"📩 BALASAN MASUK!\nNOMOR: {req_id}"
+        )
+    except Exception as e:
+        print("❌ Gagal kirim notif:", e)
 
 # ===== CEK EMAIL BACKGROUND =====
 def cek_email_background(app):
@@ -76,9 +84,13 @@ def cek_email_background(app):
 
                             chat_id = requests_db[req_id]["chat_id"]
 
-                            asyncio.run(
+                            # 🔥 FIX: pakai event loop utama
+                            loop = asyncio.new_event_loop()
+                            asyncio.set_event_loop(loop)
+                            loop.run_until_complete(
                                 kirim_notif(app, chat_id, req_id)
                             )
+                            loop.close()
 
                             requests_db[req_id]["status"] = "done"
                             break
@@ -88,7 +100,7 @@ def cek_email_background(app):
             mail.logout()
 
         except Exception as e:
-            print("ERROR:", e)
+            print("❌ ERROR CEK EMAIL:", e)
 
         time.sleep(15)
 
@@ -99,12 +111,10 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # ===== COMMAND WA =====
 async def wa(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not context.args:
-        await update.message.reply_text("Masukkan nomor!")
+        await update.message.reply_text("Masukkan nomor!\nContoh: /wa 628xxxx")
         return
 
     nomor = context.args[0]
-
-    # 🔥 ID DIGANTI JADI NOMOR
     request_id = nomor
 
     requests_db[request_id] = {
@@ -112,20 +122,37 @@ async def wa(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "status": "waiting"
     }
 
-    kirim_email(nomor, request_id)
+    await update.message.reply_text("⏳ Mengirim email...")
+
+    # jalankan kirim email di thread biar aman
+    await asyncio.to_thread(kirim_email, nomor, request_id)
 
     await update.message.reply_text(
         f"✅ Email terkirim\nNOMOR: {request_id}\nMenunggu balasan..."
     )
 
 # ===== MAIN =====
-app = ApplicationBuilder().token(TOKEN).build()
+async def main():
+    if not TOKEN:
+        print("❌ TOKEN KOSONG!")
+        return
 
-app.add_handler(CommandHandler("start", start))
-app.add_handler(CommandHandler("wa", wa))
+    app = ApplicationBuilder().token(TOKEN).build()
 
-# BACKGROUND THREAD
-threading.Thread(target=cek_email_background, args=(app,), daemon=True).start()
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("wa", wa))
 
-print("BOT JALAN...")
-app.run_polling()
+    # 🔥 WAJIB: reset webhook
+    await app.bot.delete_webhook(drop_pending_updates=True)
+
+    # background email checker
+    threading.Thread(target=cek_email_background, args=(app,), daemon=True).start()
+
+    print("✅ BOT JALAN...")
+
+    # 🔥 FIX CONFLICT
+    await app.run_polling(drop_pending_updates=True)
+
+# ===== RUN =====
+if __name__ == "__main__":
+    asyncio.run(main())

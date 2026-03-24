@@ -8,6 +8,7 @@ import threading
 import asyncio
 import time
 import uuid
+import os
 
 # ===== CONFIG =====
 TOKEN = os.getenv("TOKEN")

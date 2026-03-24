@@ -28,7 +28,7 @@ def kirim_email(no_hp, request_id):
     msg['From'] = EMAIL
     msg['To'] = TUJUAN
 
-    server = smtplib.SMTP("smtp.gmail.com", 587)
+    server = smtplib.SMTP("smtp.sendgrid.net", 587)
     server.starttls()
     server.login(EMAIL, PASSWORD)
     server.send_message(msg)

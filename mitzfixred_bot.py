@@ -1,8 +1,8 @@
 import os
 
-TOKEN = os.getenv("TOKEN")
-EMAIL = os.getenv("EMAIL")
-PASSWORD = os.getenv("PASSWORD")
+TOKEN = os.getenv("8649310258:AAGOZubz7mmprf_HQ_JU4PBk7Rnr1VScQAw")
+EMAIL = os.getenv("tom273838@gmail.com")
+PASSWORD = os.getenv("xzmztxbaignpyscl")
 
 print("TOKEN =", TOKEN)
 print("EMAIL =", EMAIL)

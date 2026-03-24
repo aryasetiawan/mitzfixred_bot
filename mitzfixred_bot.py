@@ -1,13 +1,3 @@
-import os
-
-TOKEN = os.getenv("8649310258:AAHR3wg463R3bRot0KRDQoSMZ-L5Gky6plI")
-EMAIL = os.getenv("tom273838@gmail.com")
-PASSWORD = os.getenv("xzmztxbaignpyscl")
-
-print("TOKEN =", TOKEN)
-print("EMAIL =", EMAIL)
-print("PASSWORD =", PASSWORD)
-
 from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 import smtplib
@@ -18,22 +8,27 @@ import threading
 import asyncio
 import time
 import uuid
+import os
 
-# ===== CONFIG =====
-TOKEN = "8649310258:AAHR3wg463R3bRot0KRDQoSMZ-L5Gky6plI"
-EMAIL = "tom273838@gmail.com"
-PASSWORD = "xzmztxbaignpyscl"
+# ===== CONFIG (AMBIL DARI RAILWAY VARIABLES) =====
+TOKEN = os.getenv("TOKEN")
+EMAIL = os.getenv("EMAIL")
+PASSWORD = os.getenv("PASSWORD")
 TUJUAN = "support@support.whatsapp.com"
+
+print("TOKEN =", TOKEN)
+print("EMAIL =", EMAIL)
+print("PASSWORD =", PASSWORD)
 
 # ===== DATABASE =====
 requests_db = {}
 
 # ===== KIRIM EMAIL =====
 def kirim_email(no_hp, request_id):
-    isi = f"Halo WhatsApp Support\nNOMOR: {no_hp}"
+    isi = f"Halo WhatsApp Support\nNomor: {no_hp}\nNOMOR: {request_id}"
 
     msg = MIMEText(isi)
-    msg['Subject'] = f"WA {no_hp}"
+    msg['Subject'] = f"WA {request_id}"
     msg['From'] = EMAIL
     msg['To'] = TUJUAN
 
@@ -43,11 +38,15 @@ def kirim_email(no_hp, request_id):
     server.send_message(msg)
     server.quit()
 
-# ===== CEK BALASAN =====
-def cek_email_background(app):
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
+# ===== KIRIM NOTIF TELEGRAM =====
+async def kirim_notif(app, chat_id, req_id):
+    await app.bot.send_message(
+        chat_id,
+        f"📩 BALASAN MASUK!\nNOMOR: {req_id}"
+    )
 
+# ===== CEK EMAIL BACKGROUND =====
+def cek_email_background(app):
     processed = set()
 
     while True:
@@ -76,13 +75,9 @@ def cek_email_background(app):
                         if requests_db[req_id]["status"] == "waiting":
 
                             chat_id = requests_db[req_id]["chat_id"]
-                            nomor = requests_db[req_id]["nomor"]
 
-                            loop.run_until_complete(
-                                app.bot.send_message(
-                                    chat_id,
-                                    f"📩 BALASAN MASUK!\nNOMOR: {nomor}"
-                                )
+                            asyncio.run(
+                                kirim_notif(app, chat_id, req_id)
                             )
 
                             requests_db[req_id]["status"] = "done"
@@ -97,28 +92,30 @@ def cek_email_background(app):
 
         time.sleep(15)
 
-# ===== COMMAND =====
+# ===== COMMAND START =====
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Bot siap 🚀\nGunakan /wa 628xxxx")
 
+# ===== COMMAND WA =====
 async def wa(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not context.args:
         await update.message.reply_text("Masukkan nomor!")
         return
 
     nomor = context.args[0]
-    request_id = str(uuid.uuid4())[:8]
+
+    # 🔥 ID DIGANTI JADI NOMOR
+    request_id = nomor
 
     requests_db[request_id] = {
         "chat_id": update.effective_chat.id,
-        "status": "waiting",
-        "nomor": nomor
+        "status": "waiting"
     }
 
     kirim_email(nomor, request_id)
 
     await update.message.reply_text(
-        f"✅ Email terkirim\nNOMOR: {nomor}\nMenunggu balasan..."
+        f"✅ Email terkirim\nNOMOR: {request_id}\nMenunggu balasan..."
     )
 
 # ===== MAIN =====
@@ -127,7 +124,7 @@ app = ApplicationBuilder().token(TOKEN).build()
 app.add_handler(CommandHandler("start", start))
 app.add_handler(CommandHandler("wa", wa))
 
-# THREAD BACKGROUND
+# BACKGROUND THREAD
 threading.Thread(target=cek_email_background, args=(app,), daemon=True).start()
 
 print("BOT JALAN...")

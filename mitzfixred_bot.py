@@ -10,9 +10,9 @@ import time
 import uuid
 
 # ===== CONFIG =====
-TOKEN = "TOKEN"
-EMAIL = "EMAIL"
-PASSWORD = "PASSWORD"
+TOKEN = os.getenv("TOKEN")
+EMAIL = os.getenv("EMAIL")
+PASSWORD = os.getenv("PASSWORD")
 TUJUAN = "support@support.whatsapp.com"
 
 # ===== DATABASE =====
